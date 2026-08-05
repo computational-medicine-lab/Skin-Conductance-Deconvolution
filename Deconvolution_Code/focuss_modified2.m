@@ -1,4 +1,4 @@
-function [ x ] = focuss_modified2(x_, y, A, targetdiv, positive_code, xiter, p, lambdamax, amp_threshold, separation)  
+function [ x, lambdax ] = focuss_modified2(x_, y, A, targetdiv, positive_code, xiter, p, lambdamax, amp_threshold, separation)  
 %  [ x ] = focuss( y, A, targetdiv, positive_code, xiter, p, lambdamax )
 %
 %       Function to find the solution to Ax = y where x and
@@ -25,6 +25,7 @@ function [ x ] = focuss_modified2(x_, y, A, targetdiv, positive_code, xiter, p, 
 %
 % JFM:  10/20/2003
 % Rev:  3/10/2004
+% Rev:  8/5/2026 - return lambda
 
 [m N] = size(y);
 [m n] = size(A);

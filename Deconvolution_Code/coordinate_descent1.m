@@ -25,7 +25,7 @@ for j=1:30
     y_ = y-A*[0;y0]; % subtract the initial condition
    
     uj_1 = ones(Nu,1);  % initialize vector u with all ones
-    [ uj ] = focuss_modified2(uj_1, y_, B, ubn, true, 15, 0.5, 1e-4, 1e-5 , round(minimum_peak_distance * Fsu)); % solve the inverse problem with sparse recovery to find the neural stimuli
+    [ uj, Reg ] = focuss_modified2(uj_1, y_, B, ubn, true, 15, 0.5, 1e-4, 1e-5 , round(minimum_peak_distance * Fsu)); % solve the inverse problem with sparse recovery to find the neural stimuli
     
     tau_j = SystemID_interior_point1(tau_j_1, y, ty, uj, tu, ub, lb); % estimate the system parameters
     tau_j_1 = tau_j;
@@ -39,23 +39,23 @@ while(1)
     [A, B] = create_A_B_matrix_ss_multires(tau_j_1, Nu, Fsu, Fsy); % create dictionary matrices
     y_ = y-A*[0;y0]; % subtract the initial condition
     uj_1 = uj; % initialize vector with previous solution
-    [uj, J, Reg] = focussreg3_modified(uj_1, y_, B, 0.01); % solve the inverse problem with generalized cross-validation based sparse recovery to find the neural stimuli
+    [uj, J, Reg] = focussreg3_modified(uj_1, y_, B, 0.01, Reg); % solve the inverse problem with generalized cross-validation based sparse recovery to find the neural stimuli
     tau_j = SystemID_interior_point1(tau_j_1, y, ty, uj, tu, ub, lb);
-    tau_j_1 = tau_j;
     
     % display the estimated system arameters
-%     fprintf('count = %d---->   ',count);
-%     fprintf('tau1 = %d,   tau2 = %d\n', tau_j(1),tau_j(2));
+    %     fprintf('count = %d---->   ',count);
+    %     fprintf('tau1 = %d,   tau2 = %d\n', tau_j(1),tau_j(2));
     
     % check for convergence
     if(round((uj)*5e1)/5e1 == round((uj_1)*5e1)/5e1)
-                disp('convergence achieved for u');
-                 if(round(tau_j(1)*1e2)/1e2 == round(tau_j_1(1)*1e2)/1e2 && round(tau_j(2)*1e2)/1e2 == round(tau_j_1(2)*1e2)/1e2 && round(tau_j(2)*1e2)/1e2 == round(tau_j_1(2)*1e2)/1e2)
-                     disp('convergence achived for tau');
-                     convergenceFlag = 1;
-                     break;
-                 end
+        disp('convergence achieved for u');
+        if(round(tau_j(1)*1e2)/1e2 == round(tau_j_1(1)*1e2)/1e2 && round(tau_j(2)*1e2)/1e2 == round(tau_j_1(2)*1e2)/1e2 && round(tau_j(2)*1e2)/1e2 == round(tau_j_1(2)*1e2)/1e2)
+            disp('convergence achived for tau');
+            convergenceFlag = 1;
+            break;
+        end
     end
+    tau_j_1 = tau_j;
     count = count+1;
     if(count>maxiter)
         convergenceFlag = 0;

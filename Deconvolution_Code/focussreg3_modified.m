@@ -1,8 +1,8 @@
-function [x, J, Reg] = focussreg3_modified(x, b, G, K)
+function [x, J, Reg] = focussreg3_modified(x, b, G, K, lambd)
 x = x(:);
 b = b(:);
 [m n] = size(G);
-lambd=2.0e-3;
+% lambd=2.0e-3;
 %K=0.001;
 itermax = 1000;
 for index_xiter=1:30
@@ -15,7 +15,7 @@ for index_xiter=1:30
     end
     [U,S,V] = svd(G*sqrt(W));
     E=diag(U'*b*b'*U);
-    vlambd=@(l)sum(E.*(l./(diag(S).^2+l^2)).^2)/(1/m*sum(l./(diag(S).^2+l^2))^2);
+    vlambd=@(l)sum(E.*(l./(diag(S).^2+l)).^2)/(1/m*sum(l./(diag(S).^2+l))^2);
     lambd = fminbnd(vlambd, 0, 10);
     lambdaer(index_xiter)=lambd;
 %     x2(index_xiter)=norm(x);
@@ -38,7 +38,7 @@ while (round(lambdaer(index_xiter)*10^3)/10^3)~=(round(lambdaer(index_xiter-1)*1
     end
     [U,S,V] = svd(G*sqrt(W));
     E=diag(U'*b*b'*U);
-    vlambd=@(l)sum(E.*(l./(diag(S).^2+l^2)).^2)/(1/m*sum(l./(diag(S).^2+l^2))^2);
+    vlambd=@(l)sum(E.*(l./(diag(S).^2+l)).^2)/(1/m*sum(l./(diag(S).^2+l))^2);
     lambd = fminbnd(vlambd, 0, 1);
     fprintf('%d,  ',lambd);
     lambdaer(index_xiter)=lambd;
