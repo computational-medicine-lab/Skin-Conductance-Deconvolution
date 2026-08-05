@@ -1,8 +1,8 @@
 %codeForExperiment
 % If you are using this code please cite the following paper
 
-% Wickramasuriya DS, Amin MR and Faghih RT (2019) 
-% Skin Conductance as a Viable Alternative for Closing the Deep Brain Stimulation Loop in Neuropsychiatric Disorders. 
+% Wickramasuriya DS, Amin MR and Faghih RT (2019)
+% Skin Conductance as a Viable Alternative for Closing the Deep Brain Stimulation Loop in Neuropsychiatric Disorders.
 % Front. Neurosci. 13:780. doi: 10.3389/fnins.2019.00780
 
 close all;
@@ -13,7 +13,7 @@ load('UT_Dallas_data\s.mat') % load UT dallas
 
 sub_fron_neuro = [1, 5, 8, 9, 12, 16]; %Frontiers in Neuroscience subjects
 
-%     Time        index                         Experimental Condition 
+%     Time        index                         Experimental Condition
 %----------------------------------------------------------------------
 %     0:00.125        1     "    0    0    0	Relax
 %     5:00.125     2401     "    0    0    0	PhysicalStress
@@ -31,7 +31,7 @@ dirname = 'deconvolution_results';
 mkdir(dirname);
 
 for subject = sub_fron_neuro(1)
-    
+
     %% preprocessing
     % lowpass filter with 64 order 0.5 Hz filter
     Fs = 8;                    % sample rate in Hz
@@ -40,19 +40,19 @@ for subject = sub_fron_neuro(1)
 
     Fs = Fs/downsampling_factor;% new sampling frequency
     rng default;
-    
+
     % Design a 64th order lowpass FIR filter with cutoff frequency of 75 Hz.
     Fnorm = 0.5/(Fs/2);           % Normalized frequency
     df = designfilt('lowpassfir','FilterOrder',64,'CutoffFrequency',Fnorm);
     D = mean(grpdelay(df)); % mean group delay
     temp = filter(df,[y'; zeros(D,1)]); % Append D zeros to the input data in order to adjust for group delay later
     temp = temp(D+1:end)';                  % Shift data to compensate for delay
-    
+
     %% tonic component removal
     % [xn, mu, sigma] = zscore(temp);
     [r, p, t, l, d, e, obj] = cvxEDA(temp, 1/Fs, 2, 0.7, 10, 40e-4, 1e-3, 'quadprog');
 
-    %% take 3*60 seconds of cognitive stress 
+    %% take 3*60 seconds of cognitive stress
     ll = round(s(subject).y(5)/downsampling_factor);
     rr = round(s(subject).y(5)/downsampling_factor+3*60*Fs);
     Ts = 1/Fs;
@@ -66,16 +66,16 @@ for subject = sub_fron_neuro(1)
     phasic_part = CogStressMath.phasic_part;
     Fsu = 4;
     Fsy = Fs;
-    minimum_peak_distance = 1;  
+    minimum_peak_distance = 1;
     parallal_operations = 16;
     parfor i=1:parallal_operations
-    [results(i).tau_j, results(i).uj, results(i).y, results(i).lambda, results(i).convergenceFlag] = coordinate_descent1(phasic_part, ub, lb, Fsu, Fsy, minimum_peak_distance);
+        [results(i).tau_j, results(i).uj, results(i).y, results(i).lambda, results(i).convergenceFlag] = coordinate_descent1(phasic_part, ub, lb, Fsu, Fsy, minimum_peak_distance);
     end
     toc
     cost_prev1 =Inf;
     cost_prev2 =Inf;
     y1 = phasic_part;
-    
+
     % comparing all the initializations to take the best one
     for i=1:parallal_operations
         tau_j_ = results(i).tau_j;
@@ -85,14 +85,14 @@ for subject = sub_fron_neuro(1)
         [A1, B1] = create_A_B_matrix_ss_multires(tau_j_(1:2), Nu, Fsu, Fsy);
         y = y1;
         y_ = A1*[0;y(1)] + B1 * uj_;
-        
+
         % we consider two cost functions for comparison
 
         cost1 = 0.5 * norm(y-y_,2).^2;
         cost2 = 0.5 * norm(y-y_,2).^2 + lambda_ * norm(uj_, 1);
 
         if(cost1<cost_prev1 && results(i).convergenceFlag == 1 && round(results(i).tau_j(1)*1e4)/1e4 ~= lb(1) && round(results(i).tau_j(1)*1e4)/1e4 ~= ub(1))
-            results1 = results(i); 
+            results1 = results(i);
             cost_prev1 = cost1;
         end
         if(cost2<cost_prev2 && results(i).convergenceFlag == 1 && round(results(i).tau_j(1)*1e4)/1e4 ~= lb(1) && round(results(i).tau_j(1)*1e4)/1e4 ~= ub(1))
@@ -100,21 +100,21 @@ for subject = sub_fron_neuro(1)
             cost_prev2 = cost2;
         end
     end
-    
+
     % "result1" is taken as the solution
-    
+
     ll = round(s(subject).y(4)/downsampling_factor);
     rr = floor(s(subject).y(end)/downsampling_factor+5*60*Fs)-2;
     y_w = r(ll:end);
-    
+
     Nu = length(y_w)*Fsu/Fsy;
-    
+
     % solving inverse problem only for neural stimuli (u(t)) for entire signal
     uj_1 = ones(Nu,1);
     [A1, B1] = create_A_B_matrix_ss_multires(results1.tau_j(1:2), Nu, Fsu, Fsy);
     y_w_ = y_w-A1*[0;y_w(1)];
     [uj_whole] = focuss_modified2(uj_1, y_w_, B1, -1, true, 15, 0.5, 10e-4, 1e-1 , round(minimum_peak_distance * Fsu));
-    [uj_whole, J, Reg] = focussreg3_modified(uj_whole, y_w_, B1, 1e-2);
+    [uj_whole, J, Reg] = focussreg3_modified(uj_whole, y_w_, B1, 1e-2, results1.lambda);
 
     save(strcat([dirname,'\result_s'],num2str(subject)));
 end
